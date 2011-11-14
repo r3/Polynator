@@ -9,10 +9,10 @@ from operator import add
 import string
 
 #----------------------LOW PRIORITY--------------------------
-#TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
-#      variable the input is to be plugged. Partial plugging should work.
 #TODO: In the case of multiple variables, I'd need to store multiple exponents,
 #      one for each variable.
+#TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
+#      variable the input is to be plugged. Partial plugging should work.
 #----------------------HIGH PRIORITY-------------------------
 #TODO: Setup division of terms
 #TODO: Setup division of polynomials
@@ -33,9 +33,15 @@ class Term():
         assert isinstance(coeff, int)
         assert isinstance(expo, int)
         assert isinstance(var, str)
-        self.coeff = coeff
-        self.var = var.lower()
-        self.expo = expo
+
+        if coeff == 0:
+            self.coeff = 0
+            self.var = ''
+            self.expo = 0
+        else:
+            self.coeff = coeff
+            self.var = var.lower()
+            self.expo = expo
 
     def __str__(self):
         # Coefficient string construction
@@ -60,7 +66,11 @@ class Term():
         else:
             exponent = ''
 
-        return coefficient + variable + exponent
+        # Bring it on home.
+        if not coefficient and not variable and not exponent:
+            return '0'
+        else:
+            return coefficient + variable + exponent
 
     def __lt__(self, other):
         if isinstance(other, Term):
@@ -151,7 +161,9 @@ class Poly():
     def __str__(self):
         rep = []
         for term in self:
-            if term < 0:
+            if not term.coeff and not term.var:
+                pass
+            elif term < 0:
                 rep.append('-')
                 rep.append(str(term)[1:])  # Get rid of unnecessary signs
             else:
