@@ -14,9 +14,6 @@ import string
 #TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
 #      variable the input is to be plugged. Partial plugging should work.
 #----------------------HIGH PRIORITY-------------------------
-#TODO: Test/Fix Poly._simplify to allow for terms with either coefficients or
-#      exponents or variables of '' and 0. This may already work. Test it.
-#TODO: Setup addition and subtraction of polynomials
 #TODO: Setup multiplication and division of terms
 #TODO: Setup multiplication and division of polynomials
 #TODO: Allow for a means of operators inputting polynomials and operations
@@ -67,7 +64,13 @@ class Term():
 
     def __lt__(self, other):
         if isinstance(other, Term):
-            return self.expo < other.expo
+            if self.expo == other.expo:
+                if self.var == other.var:
+                    return self.coeff < other.coeff
+                else:
+                    return self.var < other.var
+            else:
+                return self.expo < other.expo
         elif other == 0:
             return self.coeff < 0
         elif isinstance(other, int):
@@ -124,7 +127,7 @@ class Poly():
 
     def __str__(self):
         rep = []
-        for term in self._linearize():
+        for term in self:
             if term < 0:
                 rep.append('-')
                 rep.append(str(term)[1:])  # Get rid of unnecessary signs
@@ -135,17 +138,33 @@ class Poly():
             rep.pop(0)
         return ' '.join(rep)
 
-    def _simplify(self):
-        for var in self.terms:
-            for expo in self.terms[var]:
-                self.terms[var][expo] = reduce(add, self.terms[var][expo])
+    def __add__(self, other):
+        if isinstance(other, Poly):
+            res = []
+            for term in self:
+                res.append(term)
+            for term in other:
+                res.append(term)
+            return Poly(*res)
+        else:
+            raise ArithmeticError("Non-matching exponents")
 
-    def _linearize(self):
+    def __sub__(self, other):
+        for term in other:
+            term.coeff *= -1
+        return self + other
+
+    def __iter__(self):
         rep = []
         for var in self.terms.values():
             for term in var.values():
                 rep.append(term)
-        return sorted(rep, reverse=True)
+        return iter(sorted(rep, reverse=True))
+
+    def _simplify(self):
+        for var in self.terms:
+            for expo in self.terms[var]:
+                self.terms[var][expo] = reduce(add, self.terms[var][expo])
 
     def plug(self, value):
         """Evaluate polynomial for x in f(x)"""
@@ -159,65 +178,42 @@ def parse_term(inpt):
     """
 
     def fix(num):
-        # Sometimes, input for a part is missing, we fix that here
-        if not num:
-            return 1
-        else:
-            return int(num)
-
-    # Grab any sign if it exists and truncate
-    if inpt.startswith('-'):
-        sign = -1
-        inpt = inpt[1:]
-    elif inpt.startswith('+'):
-        sign = 1
-        inpt = inpt[1:]
-    else:
-        sign = 1
-
-    # Sometimes, the input will just be a coefficient or a variable
-    if len(inpt) == 1:
-        if inpt.isalpha():
-            expon = 1
-            var = inpt
-            coeff = 1
-        elif inpt.isdigit():
-            expon = 0
-            var = ''
-            coeff = int(inpt)
-        return Term(sign * coeff, var, expon)
-
-    # Caret character used to denote existing exponent (4x^6 form)
-    try:
-        found = inpt.index('^')
-        expon = fix(inpt[found + 1:])
-        var = inpt[found - 1]
-        coeff = fix(inpt[:found - 1])
-
-    # Exponent part not noted by caret character (4x6 form)
-    except ValueError:
-        # Find first string character and assume it's the variable
-        for index, value in enumerate(inpt):
-            if value.isalpha():
-                found = index
-                var = inpt[found]
-                break
-        # Anything before the variable should be the coefficient
-        try:
-            coeff = fix(inpt[:found])
-        except ValueError:
-            raise SyntaxError("Input not valid")
-
-        # Anything after variable should be an exponent
-        if len(inpt) > found:
+        if num == '-':
+            return -1
+        elif num:
             try:
-                expon = fix(inpt[found + 1:])
+                return int(num)
             except ValueError:
-                raise SyntaxError("Input not valid")
+                raise SyntaxError("Improper input formatting ({})".format(num))
         else:
-            expon = 1
+            return 1
 
-    return Term(sign * coeff, var, expon)
+    inpt = ''.join([x for x in inpt if x != '^'])
+    coeff = ''
+    var = ''
+    expo = ''
+
+    for item in inpt:
+        if item.isdigit() and var:
+            expo += item
+        elif item.isdigit():
+            coeff += item
+        elif item.isalpha():
+            var += item
+        elif item in ('-', '+'):
+            if var and item not in expo:
+                expo = item + expo
+            elif item not in coeff:
+                coeff = item + coeff
+            else:
+                pass
+        else:
+            raise SyntaxError("Improper input formatting ({}).".format(item))
+
+    coeff = fix(coeff)
+    expo = fix(expo)
+
+    return Term(coeff, var, expo)
 
 
 def parse_poly(inpt):
@@ -227,7 +223,7 @@ def parse_poly(inpt):
     for item in inpt:
         if item in string.whitespace:
             pass
-        elif item in ['+', '-']:
+        elif item in ['+', '-'] and chunk:
             terms.append(parse_term(''.join(chunk)))
             chunk = [item]
         else:
