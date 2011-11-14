@@ -9,6 +9,7 @@ from functools import total_ordering
 from functools import reduce
 from operator import add
 
+
 @total_ordering
 class Term():
     """Term objects represent terms in a polynomial
@@ -27,7 +28,7 @@ class Term():
         # Head (Coefficient and Variable part}
         if self.coeff == -1:
             head = '-' + self.var
-        elif self.coeff:
+        elif self.coeff and self.coeff != 1:
             head = str(self.coeff) + self.var
         else:
             head = self.var
@@ -84,9 +85,7 @@ class Poly():
     passed as arguments will be ignored.
     """
 
-    #TODO Reverse order sorting is broken
-    #TODO Combine like terms method
-    #TODO Rebuild __str__ method to account for new storage style
+    #TODO: Canonical ordering (sort(lst, reverse=True)) not working
 
     def __init__(self, *args):
         """Store terms in a top-level dict keyed by var, in a lower-level
@@ -98,25 +97,28 @@ class Poly():
             if isinstance(term, Term):
                 self.terms.setdefault(term.var, {}).setdefault(
                                       term.expo, []).append(term)
+        self._simplify()
 
     def __str__(self):
         rep = []
-        for term in self.terms:
-            if term < 0:
-                rep.append('-')
-                rep.append(str(term)[1:])  # Get rid of unnecessary signs
-            else:
-                rep.append('+')
-                rep.append(str(term))
-        if rep[0] == '+':
-            return ' '.join(rep[1:])
+        for var in self.terms.values():
+            for term in var.values():
+                if term < 0:
+                    rep.append('-')
+                    rep.append(str(term)[1:])  # Get rid of unnecessary signs
+                else:
+                    rep.append('+')
+                    rep.append(str(term))
+            if rep[0] == '+':
+                return ' '.join(rep[1:])
+        rep.sort(reverse=True)
         return ' '.join(rep)
 
-    def combine_like_terms(self):
+    def _simplify(self):
         for var in self.terms:
             for expo in self.terms[var]:
-                if len(self.terms[var][expo]) > 1:
-                    self.terms[var][expo] = reduce(add, self.terms[var][expo])
+                self.terms[var][expo] = reduce(add, self.terms[var][expo])
+
 
 def parse_term(inpt):
     """Parses input based on a set of rules to create a Term
