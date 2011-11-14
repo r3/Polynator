@@ -85,7 +85,8 @@ class Poly():
     passed as arguments will be ignored.
     """
 
-    #TODO: Canonical ordering (sort(lst, reverse=True)) not working
+    #TODO: Canonical ordering isn't working as is. Can't sort list with '+' or
+    #      '-' in it as the operative terms will be moved to the back.
 
     def __init__(self, *args):
         """Store terms in a top-level dict keyed by var, in a lower-level
@@ -99,7 +100,7 @@ class Poly():
                                       term.expo, []).append(term)
         self._simplify()
 
-    def __str__(self):
+    def str(self):
         rep = []
         for var in self.terms.values():
             for term in var.values():
@@ -109,9 +110,8 @@ class Poly():
                 else:
                     rep.append('+')
                     rep.append(str(term))
-            if rep[0] == '+':
-                return ' '.join(rep[1:])
-        rep.sort(reverse=True)
+        if rep[0] == '+':
+            rep.pop(0)
         return ' '.join(rep)
 
     def _simplify(self):
