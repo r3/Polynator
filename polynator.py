@@ -6,7 +6,8 @@ This is...
 """
 
 from functools import total_ordering
-
+from functools import reduce
+from operator import add
 
 @total_ordering
 class Term():
@@ -17,10 +18,10 @@ class Term():
     of one letter, and an integer exponent.
     """
 
-    def __init__(self, coeff, var, expon):
+    def __init__(self, coeff, var, expo):
         self.coeff = coeff
         self.var = var.lower()
-        self.expon = expon
+        self.expo = expo
 
     def __str__(self):
         # Head (Coefficient and Variable part}
@@ -31,9 +32,9 @@ class Term():
         else:
             head = self.var
 
-        # Tail (Exponential part)
-        if self.expon:
-            tail = '^' + str(self.expon)
+        # Tail (exponential part)
+        if self.expo:
+            tail = '^' + str(self.expo)
         else:
             tail = ''
 
@@ -41,7 +42,7 @@ class Term():
 
     def __lt__(self, other):
         if isinstance(other, Term):
-            if self.expon > other.expon:
+            if self.expo > other.expo:
                 return False
             if self.coeff >= other.coeff:
                 return False
@@ -63,14 +64,14 @@ class Term():
             raise TypeError("These types cannot be compared")
 
     def __add__(self, other):
-        if (other.var == self.var) and (other.expon == self.expon):
-            return Term(self.coeff + other.coeff, self.var, self.expon)
+        if (other.var == self.var) and (other.expo == self.expo):
+            return Term(self.coeff + other.coeff, self.var, self.expo)
         else:
             raise ArithmeticError("Non-matching exponents")
 
     def __sub__(self, other):
-        if (other.var == self.var) and (other.expon == self.expon):
-            return Term(self.coeff - other.coeff, self.var, self.expon)
+        if (other.var == self.var) and (other.expo == self.expo):
+            return Term(self.coeff - other.coeff, self.var, self.expo)
         else:
             raise ArithmeticError("Non-matching exponents")
 
@@ -89,14 +90,14 @@ class Poly():
 
     def __init__(self, *args):
         """Store terms in a top-level dict keyed by var, in a lower-level
-        dict keyed by the term's exponents: {VAR : {EXPONENT : TERM OBJECT}}
+        dict keyed by the term's exponents: {VAR : {EXPONENT : [TERM OBJECTS]}}
         """
 
         self.terms = dict()
         for term in args:
             if isinstance(term, Term):
-                t = {term.expon : term}
-                self.terms.setdefault(term.var, {}).update(t)
+                self.terms.setdefault(term.var, {}).setdefault(
+                                      term.expo, []).append(term)
 
     def __str__(self):
         rep = []
@@ -112,10 +113,10 @@ class Poly():
         return ' '.join(rep)
 
     def combine_like_terms(self):
-        degrees = dict()
-        for term in self.terms:
-            degrees.setdefault(term.expon, []).append(term)
-
+        for var in self.terms:
+            for expo in self.terms[var]:
+                if len(self.terms[var][expo]) > 1:
+                    self.terms[var][expo] = reduce(add, self.terms[var][expo])
 
 def parse_term(inpt):
     """Parses input based on a set of rules to create a Term
