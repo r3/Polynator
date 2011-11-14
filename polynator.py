@@ -83,12 +83,22 @@ class Poly():
     passed as arguments will be ignored.
     """
 
+    #TODO Reverse order sorting is broken
+    #TODO Combine like terms method
+    #TODO Rebuild __str__ method to account for new storage style
+
     def __init__(self, *args):
-        self.terms = [x for x in args if isinstance(x, Term)]
-        self.terms.sort(reverse=True)
+        """Store terms in a top-level dict keyed by var, in a lower-level
+        dict keyed by the term's exponents: {VAR : {EXPONENT : TERM OBJECT}}
+        """
+
+        self.terms = dict()
+        for term in args:
+            if isinstance(term, Term):
+                t = {term.expon : term}
+                self.terms.setdefault(term.var, {}).update(t)
 
     def __str__(self):
-        # Needs to be changed to retain sign of leading term if negative
         rep = []
         for term in self.terms:
             if term < 0:
@@ -100,6 +110,11 @@ class Poly():
         if rep[0] == '+':
             return ' '.join(rep[1:])
         return ' '.join(rep)
+
+    def combine_like_terms(self):
+        degrees = dict()
+        for term in self.terms:
+            degrees.setdefault(term.expon, []).append(term)
 
 
 def parse_term(inpt):
