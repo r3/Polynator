@@ -1,8 +1,6 @@
 """
 Author: Ryan Roler (ryan.roler@gmail.com)
-
-This is...
-        THE POLYNATOR!
+This is...  THE POLYNATOR!
 """
 
 from functools import total_ordering
@@ -13,9 +11,11 @@ import string
 #----------------------LOW PRIORITY--------------------------
 #TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
 #      variable the input is to be plugged. Partial plugging should work.
+#TODO: In the case of multiple variables, I'd need to store multiple exponents,
+#      one for each variable.
 #----------------------HIGH PRIORITY-------------------------
-#TODO: Setup multiplication and division of terms
-#TODO: Setup multiplication and division of polynomials
+#TODO: Setup division of terms
+#TODO: Setup division of polynomials
 #TODO: Allow for a means of operators inputting polynomials and operations
 #      using either a full line input, reverse polish notation, or something
 
@@ -89,16 +89,39 @@ class Term():
             raise TypeError("These types cannot be compared")
 
     def __add__(self, other):
-        if (other.var == self.var) and (other.expo == self.expo):
-            return Term(self.coeff + other.coeff, self.var, self.expo)
+        if isinstance(other, Term):
+            if (other.var == self.var) and (other.expo == self.expo):
+                return Term(self.coeff + other.coeff, self.var, self.expo)
+            else:
+                raise ArithmeticError("Non-matching exponents")
         else:
-            raise ArithmeticError("Non-matching exponents")
+            raise TypeError("Incompatible types")
 
     def __sub__(self, other):
-        if (other.var == self.var) and (other.expo == self.expo):
-            return Term(self.coeff - other.coeff, self.var, self.expo)
+        if isinstance(other, Term):
+            if (other.var == self.var) and (other.expo == self.expo):
+                return Term(self.coeff - other.coeff, self.var, self.expo)
+            else:
+                raise ArithmeticError("Non-matching exponents")
         else:
-            raise ArithmeticError("Non-matching exponents")
+            raise TypeError("Incompatible types")
+
+    def __mul__(self, other):
+        if isinstance(other, Term):
+            if not other.var:
+                variable = self.var
+                exponent = self.expo
+            else:
+                variable = self.var
+                exponent = self.expo + other.expo
+            coefficient = self.coeff * other.coeff
+            return Term(coefficient, variable, exponent)
+        elif isinstance(other, int):
+            return Term(self.coeff * other, self.var, self.expo)
+        elif self.var == other:
+            return Term(self.coeff, self.var, self.expo + 1)
+        else:
+            raise TypeError("Incompatible types")
 
     def plug(self, value):
         """Determine value of term given x for f(x)"""
@@ -146,13 +169,29 @@ class Poly():
             for term in other:
                 res.append(term)
             return Poly(*res)
+        elif isinstance(other, int):
+            return Poly(*(list(self) + [other]))
         else:
-            raise ArithmeticError("Non-matching exponents")
+            raise ArithmeticError("Incompatible Types")
 
     def __sub__(self, other):
-        for term in other:
-            term.coeff *= -1
-        return self + other
+        if isinstance(other, Poly):
+            for term in other:
+                term.coeff *= -1
+            return self + other
+        elif isinstance(other, int):
+            return Poly(*(list(self) - [other]))
+
+    def __mul__(self, other):
+        res = []
+        if isinstance(other, Poly):
+            for multiplicand in self:
+                for multiplier in other:
+                    res.append(multiplicand * multiplier)
+        elif isinstance(other, int):
+            for term in self:
+                res.append(term * other)
+        return Poly(*res)
 
     def __iter__(self):
         rep = []
