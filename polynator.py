@@ -3,7 +3,6 @@ Author: Ryan Roler (ryan.roler@gmail.com)
 
 This is...
         THE POLYNATOR!
-this
 """
 
 from functools import total_ordering
