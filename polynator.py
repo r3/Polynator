@@ -87,6 +87,8 @@ class Poly():
 
     #TODO: Canonical ordering isn't working as is. Can't sort list with '+' or
     #      '-' in it as the operative terms will be moved to the back.
+    #      I could compile the list of terms, then sort the list, then iterate
+    #      through the list and insert operative terms.
 
     def __init__(self, *args):
         """Store terms in a top-level dict keyed by var, in a lower-level
@@ -100,7 +102,7 @@ class Poly():
                                       term.expo, []).append(term)
         self._simplify()
 
-    def str(self):
+    def __str__(self):
         rep = []
         for var in self.terms.values():
             for term in var.values():
