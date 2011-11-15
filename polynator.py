@@ -1,4 +1,7 @@
-"""This is...
+"""
+Author: Ryan Roler (ryan.roler@gmail.com)
+
+This is...
         THE POLYNATOR!
 """
 
@@ -59,7 +62,6 @@ class Term():
         else:
             raise TypeError("These types cannot be compared")
 
-
     def __add__(self, other):
         if (other.var == self.var) and (other.expon == self.expon):
             return Term(self.coeff + other.coeff, self.var, self.expon)
@@ -99,7 +101,13 @@ class Poly():
             return ' '.join(rep[1:])
         return ' '.join(rep)
 
+
 def parse_term(inpt):
+    """Parses input based on a set of rules to create a Term
+    Allows for both 4x^3 or 4x3, which will build equivilant
+    Term objects.
+    """
+
     def fix(num):
         # Sometimes, input for a part is missing, we fix that here
         if not num:
@@ -122,7 +130,7 @@ def parse_term(inpt):
         coeff = fix(inpt[:found - 1])
 
     # Exponent part not noted by caret character (4x6 form)
-    except ValueError:  
+    except ValueError:
         # Find first string character and assume it's the variable
         for index, value in enumerate(inpt):
             if value.isalpha():

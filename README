@@ -1,1 +1,7 @@
+Author: Ryan Roler (ryan.roler@gmail.com)
 
+The Polynator is a polynomial calculator designed to fullfill the requirements set out at the following wiki:
+
+http://cse222.wikispaces.com/Polynomials
+
+The calculator will allow for addition, subtraction, multiplication and division of polynomials of any given length and degree (subject to Python's limitations). The program will allow for instantiation of polynomials based on input and shall be capable of parsing complete expressions when complete. I may include a LaTeX formatter for output when the given specs have been met. Additional likely improvements will be the modulo operator to allow for remainders in polynomial division.
