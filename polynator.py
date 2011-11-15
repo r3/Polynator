@@ -14,6 +14,7 @@ import string
 #TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
 #      variable the input is to be plugged. Partial plugging should work.
 #----------------------HIGH PRIORITY-------------------------
+#TODO: Parse_poly doesn't handle negative exponents
 #TODO: Setup division of terms
 #TODO: Setup division of polynomials
 #TODO: Allow for a means of operators inputting polynomials and operations
@@ -133,6 +134,11 @@ class Term():
         else:
             raise TypeError("Incompatible types")
 
+    def __div__(self, other):
+        if isinstance(other, Term):
+            if self.var == other.var:
+                coefficient = self.coeff / other.coeff
+
     def plug(self, value):
         """Determine value of term given x for f(x)"""
         return self.coeff * (value ** self.expo)
@@ -200,7 +206,7 @@ class Poly():
             for multiplicand in self:
                 for multiplier in other:
                     res.append(multiplicand * multiplier)
-        elif isinstance(other, int):
+        elif isinstance(other, (int, Term, str)):
             for term in self:
                 res.append(term * other)
         return Poly(*res)
