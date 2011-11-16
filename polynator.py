@@ -14,6 +14,8 @@ import string
 #TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
 #      variable the input is to be plugged. Partial plugging should work.
 #----------------------HIGH PRIORITY-------------------------
+#TODO: Test/Fix Poly._simplify to allow for terms with either coefficients or
+#      exponents or variables of '' and 0. This may already work. Test it.
 #TODO: Setup addition and subtraction of polynomials
 #TODO: Setup multiplication and division of terms
 #TODO: Setup multiplication and division of polynomials
@@ -133,8 +135,6 @@ class Poly():
             rep.pop(0)
         return ' '.join(rep)
 
-    #TODO: This should handle terms with expo of 0
-    #TODO: This should handle terms with coeff of 0
     def _simplify(self):
         for var in self.terms:
             for expo in self.terms[var]:
