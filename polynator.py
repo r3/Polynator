@@ -8,6 +8,17 @@ This is...
 from functools import total_ordering
 from functools import reduce
 from operator import add
+import string
+
+#----------------------LOW PRIORITY--------------------------
+#TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
+#      variable the input is to be plugged. Partial plugging should work.
+#----------------------HIGH PRIORITY-------------------------
+#TODO: Setup addition and subtraction of polynomials
+#TODO: Setup multiplication and division of terms
+#TODO: Setup multiplication and division of polynomials
+#TODO: Allow for a means of operators inputting polynomials and operations
+#      using either a full line input, reverse polish notation, or something
 
 
 @total_ordering
@@ -20,6 +31,9 @@ class Term():
     """
 
     def __init__(self, coeff, var, expo):
+        assert isinstance(coeff, int)
+        assert isinstance(expo, int)
+        assert isinstance(var, str)
         self.coeff = coeff
         self.var = var.lower()
         self.expo = expo
@@ -29,6 +43,8 @@ class Term():
         if self.coeff == -1:
             coefficient = '-'
         elif self.coeff and self.coeff != 1:
+            coefficient = str(self.coeff)
+        elif self.coeff and not self.expo and not self.var:
             coefficient = str(self.coeff)
         else:
             coefficient = ''
@@ -117,6 +133,8 @@ class Poly():
             rep.pop(0)
         return ' '.join(rep)
 
+    #TODO: This should handle terms with expo of 0
+    #TODO: This should handle terms with coeff of 0
     def _simplify(self):
         for var in self.terms:
             for expo in self.terms[var]:
@@ -135,7 +153,7 @@ class Poly():
 
 
 def parse_term(inpt):
-    """Parses input based on a set of rules to create a Term
+    """Parses input to create a Term
     Allows for both 4x^3 or 4x3, which will build equivilant
     Term objects.
     """
@@ -150,6 +168,9 @@ def parse_term(inpt):
     # Grab any sign if it exists and truncate
     if inpt.startswith('-'):
         sign = -1
+        inpt = inpt[1:]
+    elif inpt.startswith('+'):
+        sign = 1
         inpt = inpt[1:]
     else:
         sign = 1
@@ -198,24 +219,21 @@ def parse_term(inpt):
 
     return Term(sign * coeff, var, expon)
 
-#TODO: Changes negative numbers into positive ones. Fix that. Somehow.
+
 def parse_poly(inpt):
-    def join(item):
-        return sum(item, [])
-
-    lst = [inpt]
-    for operator in ('-', '+'):
-        lst = join(x.split(operator) for x in lst)
-
-    return Poly(*[parse_term(x.strip()) for x in lst])
+    """Parses input to create a Poly"""
+    chunk = []
+    terms = []
+    for item in inpt:
+        if item in string.whitespace:
+            pass
+        elif item in ['+', '-']:
+            terms.append(parse_term(''.join(chunk)))
+            chunk = [item]
+        else:
+            chunk.append(item)
+    terms.append(parse_term(''.join(chunk)))
+    return Poly(*terms)
 
 if __name__ == '__main__':
-    stack = []
-
-    while True:
-        try:
-            stack.append(parse_term(input('>> ')))
-        except Exception:
-            break
-
-    print(Poly(stack))
+    pass
