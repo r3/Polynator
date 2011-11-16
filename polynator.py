@@ -25,42 +25,45 @@ class Term():
         self.expo = expo
 
     def __str__(self):
-        # Head (Coefficient and Variable part}
+        # Coefficient string construction
         if self.coeff == -1:
-            head = '-' + self.var
+            coefficient = '-'
         elif self.coeff and self.coeff != 1:
-            head = str(self.coeff) + self.var
+            coefficient = str(self.coeff)
         else:
-            head = self.var
+            coefficient = ''
 
-        # Tail (exponential part)
-        if self.expo:
-            tail = '^' + str(self.expo)
+        # Variable string construction
+        if self.var and (self.expo != 0):
+            variable = self.var
         else:
-            tail = ''
+            variable = ''
 
-        return head + tail
+        # Exponent string construction
+        if self.expo and (self.expo != 0) and (self.expo != 1):
+            exponent = '^' + str(self.expo)
+        else:
+            exponent = ''
+
+        return coefficient + variable + exponent
 
     def __lt__(self, other):
         if isinstance(other, Term):
-            if self.expo > other.expo:
-                return False
-            if self.coeff >= other.coeff:
-                return False
-            return True
+            return self.expo < other.expo
         elif other == 0:
             return self.coeff < 0
+        elif isinstance(other, int):
+            return False
         else:
             raise TypeError("These types cannot be compared")
 
     def __eq__(self, other):
         if isinstance(other, Term):
-            for key, value in self.__dict__.items():
-                if value != other.__dict__[key]:
-                    return False
-            return True
+            return self.__dict__ == other.__dict__
         elif other == 0:
             return self.coeff == 0
+        elif isinstance(other, int):
+            return False
         else:
             raise TypeError("These types cannot be compared")
 
@@ -76,6 +79,10 @@ class Term():
         else:
             raise ArithmeticError("Non-matching exponents")
 
+    def plug(self, value):
+        """Determine value of term given x for f(x)"""
+        return self.coeff * (value ** self.expo)
+
 
 class Poly():
     """Poly objects represent polynomials.
@@ -84,11 +91,6 @@ class Poly():
     arguments when instantiating. Non-Term objects
     passed as arguments will be ignored.
     """
-
-    #TODO: Canonical ordering isn't working as is. Can't sort list with '+' or
-    #      '-' in it as the operative terms will be moved to the back.
-    #      I could compile the list of terms, then sort the list, then iterate
-    #      through the list and insert operative terms.
 
     def __init__(self, *args):
         """Store terms in a top-level dict keyed by var, in a lower-level
@@ -104,14 +106,13 @@ class Poly():
 
     def __str__(self):
         rep = []
-        for var in self.terms.values():
-            for term in var.values():
-                if term < 0:
-                    rep.append('-')
-                    rep.append(str(term)[1:])  # Get rid of unnecessary signs
-                else:
-                    rep.append('+')
-                    rep.append(str(term))
+        for term in self._linearize():
+            if term < 0:
+                rep.append('-')
+                rep.append(str(term)[1:])  # Get rid of unnecessary signs
+            else:
+                rep.append('+')
+                rep.append(str(term))
         if rep[0] == '+':
             rep.pop(0)
         return ' '.join(rep)
@@ -120,6 +121,17 @@ class Poly():
         for var in self.terms:
             for expo in self.terms[var]:
                 self.terms[var][expo] = reduce(add, self.terms[var][expo])
+
+    def _linearize(self):
+        rep = []
+        for var in self.terms.values():
+            for term in var.values():
+                rep.append(term)
+        return sorted(rep, reverse=True)
+
+    def plug(self, value):
+        """Evaluate polynomial for x in f(x)"""
+        return reduce(add, (x.plug(value) for x in self._linearize()))
 
 
 def parse_term(inpt):
@@ -142,6 +154,18 @@ def parse_term(inpt):
     else:
         sign = 1
 
+    # Sometimes, the input will just be a coefficient or a variable
+    if len(inpt) == 1:
+        if inpt.isalpha():
+            expon = 1
+            var = inpt
+            coeff = 1
+        elif inpt.isdigit():
+            expon = 0
+            var = ''
+            coeff = int(inpt)
+        return Term(sign * coeff, var, expon)
+
     # Caret character used to denote existing exponent (4x^6 form)
     try:
         found = inpt.index('^')
@@ -155,7 +179,8 @@ def parse_term(inpt):
         for index, value in enumerate(inpt):
             if value.isalpha():
                 found = index
-        var = inpt[found]
+                var = inpt[found]
+                break
         # Anything before the variable should be the coefficient
         try:
             coeff = fix(inpt[:found])
@@ -172,6 +197,17 @@ def parse_term(inpt):
             expon = 1
 
     return Term(sign * coeff, var, expon)
+
+#TODO: Changes negative numbers into positive ones. Fix that. Somehow.
+def parse_poly(inpt):
+    def join(item):
+        return sum(item, [])
+
+    lst = [inpt]
+    for operator in ('-', '+'):
+        lst = join(x.split(operator) for x in lst)
+
+    return Poly(*[parse_term(x.strip()) for x in lst])
 
 if __name__ == '__main__':
     stack = []
