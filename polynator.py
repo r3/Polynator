@@ -10,11 +10,10 @@ import string
 
 #----------------------LOW PRIORITY--------------------------
 #TODO: In the case of multiple variables, I'd need to store multiple exponents,
-#      one for each variable.
+#      one for each variable. Current implementation is broken.
 #TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
 #      variable the input is to be plugged. Partial plugging should work.
 #----------------------HIGH PRIORITY-------------------------
-#TODO: Parse_poly doesn't handle negative exponents
 #TODO: Setup division of terms
 #TODO: Setup division of polynomials
 #TODO: Allow for a means of operators inputting polynomials and operations
@@ -30,19 +29,20 @@ class Term():
     of one letter, and an integer exponent.
     """
 
-    def __init__(self, coeff, var, expo):
-        assert isinstance(coeff, int)
+    def __init__(self, coeff=0, var='', expo=0):
+        assert isinstance(coeff, (int, float))
         assert isinstance(expo, int)
         assert isinstance(var, str)
 
+        self.coeff = coeff
+        self.var = var.lower()
+        self.expo = expo
+
         if coeff == 0:
-            self.coeff = 0
             self.var = ''
             self.expo = 0
-        else:
-            self.coeff = coeff
-            self.var = var.lower()
-            self.expo = expo
+        elif expo == 0:
+            self.var = ''
 
     def __str__(self):
         # Coefficient string construction
@@ -75,13 +75,13 @@ class Term():
 
     def __lt__(self, other):
         if isinstance(other, Term):
-            if self.expo == other.expo:
-                if self.var == other.var:
+            if self.var == other.var:
+                if self.expo == other.expo:
                     return self.coeff < other.coeff
                 else:
-                    return self.var < other.var
+                    return self.expo < other.expo
             else:
-                return self.expo < other.expo
+                return self.var < other.var
         elif other == 0:
             return self.coeff < 0
         elif isinstance(other, int):
@@ -104,7 +104,7 @@ class Term():
             if (other.var == self.var) and (other.expo == self.expo):
                 return Term(self.coeff + other.coeff, self.var, self.expo)
             else:
-                raise ArithmeticError("Non-matching exponents")
+                raise ValueError("Non-matching exponents")
         else:
             raise TypeError("Incompatible types")
 
@@ -113,7 +113,7 @@ class Term():
             if (other.var == self.var) and (other.expo == self.expo):
                 return Term(self.coeff - other.coeff, self.var, self.expo)
             else:
-                raise ArithmeticError("Non-matching exponents")
+                raise ValueError("Non-matching exponents")
         else:
             raise TypeError("Incompatible types")
 
@@ -134,16 +134,28 @@ class Term():
         else:
             raise TypeError("Incompatible types")
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         if isinstance(other, Term):
+            coefficient = self.coeff / other.coeff
+            variable = self.var
             if self.var == other.var:
-                coefficient = self.coeff / other.coeff
+                exponent = self.expo - other.expo
+        elif isinstance(other, int):
+            coefficient = self.coeff / other
+            variable = self.var
+            exponent = self.expo
+        else:
+            raise TypeError("Incompatible types")
+        if not coefficient.is_integer():
+            raise ValueError("Not an even factor")
+        return Term(int(coefficient), variable, exponent)
 
     def plug(self, value):
         """Determine value of term given x for f(x)"""
         return self.coeff * (value ** self.expo)
 
 
+@total_ordering
 class Poly():
     """Poly objects represent polynomials.
     These are ordered collections of Term objects.
@@ -169,15 +181,35 @@ class Poly():
         for term in self:
             if not term.coeff and not term.var:
                 pass
-            elif term < 0:
+            elif term < 0 and rep:
                 rep.append('-')
                 rep.append(str(term)[1:])  # Get rid of unnecessary signs
+            elif term < 0:
+                rep.append(str(term))
             else:
                 rep.append('+')
                 rep.append(str(term))
-        if rep[0] == '+':
+        if rep and rep[0] == '+':
             rep.pop(0)
+        if not rep:
+            return '0'
         return ' '.join(rep)
+
+    def __lt__(self, other):
+        if isinstance(other, Poly):
+            return list(self)[0] < list(other)[0]
+        elif isinstance(other, Term):
+            return list(self)[0] < other
+        elif other == 0:
+            return list(self)[0] < 0
+        else:
+            raise TypeError("These types cannot be compared")
+
+    def __eq__(self, other):
+        if isinstance(other, Poly):
+            list(self) == list(other)
+        else:
+            raise TypeError("These types cannot be compared")
 
     def __add__(self, other):
         if isinstance(other, Poly):
@@ -190,7 +222,7 @@ class Poly():
         elif isinstance(other, int):
             return Poly(*(list(self) + [other]))
         else:
-            raise ArithmeticError("Incompatible Types")
+            raise ValueError("Incompatible Types")
 
     def __sub__(self, other):
         if isinstance(other, Poly):
@@ -211,6 +243,16 @@ class Poly():
                 res.append(term * other)
         return Poly(*res)
 
+    def __truediv__(self, other):
+        def factor():
+            return self.term(1) / other.term(1)
+        if isinstance(other, Poly):
+            res = parse_poly('0')
+            while isinstance(factor(), Term):
+                res = (self * factor() * -1) + res
+                print(res)
+            return res
+
     def __iter__(self):
         rep = []
         for var in self.terms.values():
@@ -222,6 +264,13 @@ class Poly():
         for var in self.terms:
             for expo in self.terms[var]:
                 self.terms[var][expo] = reduce(add, self.terms[var][expo])
+
+    @property
+    def degree(self):
+        return list(self)[0].expo
+
+    def term(self, number):
+        return list(self)[number - 1]
 
     def plug(self, value):
         """Evaluate polynomial for x in f(x)"""
@@ -274,18 +323,21 @@ def parse_term(inpt):
 
 
 def parse_poly(inpt):
-    """Parses input to create a Poly"""
-    chunk = []
+    """Parses input to create a Poly
+    operators and terms should be separated by spaces:
+    5x^3 - 3x^2 + x + 9
+    """
+
     terms = []
-    for item in inpt:
-        if item in string.whitespace:
+    sign = 1
+    for item in inpt.split():
+        if item in string.whitespace or item == '+':
             pass
-        elif item in ['+', '-'] and chunk:
-            terms.append(parse_term(''.join(chunk)))
-            chunk = [item]
+        elif item == '-':
+            sign = -1
         else:
-            chunk.append(item)
-    terms.append(parse_term(''.join(chunk)))
+            terms.append(parse_term(''.join(item)) * sign)
+            sign = 1
     return Poly(*terms)
 
 if __name__ == '__main__':
