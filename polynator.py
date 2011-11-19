@@ -12,9 +12,9 @@ import string
 #----------------------LOW PRIORITY--------------------------
 #TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
 #      variable the input is to be plugged. Still works for 'x' vars.
+#TODO: Implement exponentiation
+#TODO: Implement __radd__ type methods for Term and Poly
 #----------------------HIGH PRIORITY-------------------------
-#TODO: Allow for a means of operators inputting polynomials and operations
-#      using either a full line input, reverse polish notation, or something
 
 
 @total_ordering
@@ -30,6 +30,7 @@ class Term():
         if len(var) > 1:
             var = var[-1]
             print("Allows for single variables only, using '{}'".format(var))
+
         self.coeff = float(coeff)
         self.var = var.lower()
         self.expo = expo
@@ -258,11 +259,7 @@ class Poly():
             res = []
             while other.degree <= remain.degree:
                 res.append(factor(remain, other))
-                #print("{} times {} is {}".format(
-                #    res[-1], other, other * res[-1]))
-                #print("{}".format(remain), end='')
                 remain = (other * res[-1] * -1) + remain
-                #print(" minux {} is {}".format(other * res[-1], remain))
             return Poly(*res), remain
 
     def __truediv__(self, other):

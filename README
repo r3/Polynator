@@ -1,5 +1,7 @@
 Author: Ryan Roler (ryan.roler@gmail.com)
 
+Requirements: Python 2.7 (py2_polynator.py) or Python 3 (polynator.py)
+
 The Polynator is a polynomial calculator designed to fullfill the requirements set out at the following wiki:
 
 http://cse222.wikispaces.com/Polynomials
