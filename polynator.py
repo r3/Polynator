@@ -119,15 +119,17 @@ class Term():
         else:
             raise TypeError("Incompatible types")
 
-    #BUG! x^6 * 1 = x^6 but 1 * x^6 = 1
     def __mul__(self, other):
         if isinstance(other, Term):
             if not other.var:
                 variable = self.var
                 exponent = self.expo
-            else:
+            elif other.var == self.var:
                 variable = self.var
                 exponent = self.expo + other.expo
+            else:
+                variable = other.var
+                exponent = other.expo
             coefficient = self.coeff * other.coeff
             return Term(coefficient, variable, exponent)
         elif isinstance(other, int):
@@ -252,10 +254,10 @@ class Poly():
             res = []
             while other.degree <= remain.degree:
                 res.append(factor(remain, other))
-                print("{} times {} is {}".format(res[-1], other, other * res[-1]))
-                print("{}".format(remain), end='')
+                #print("{} times {} is {}".format(res[-1], other, other * res[-1]))
+                #print("{}".format(remain), end='')
                 remain = (other * res[-1] * -1) + remain
-                print(" minux {} is {}".format(other * res[-1], remain))
+                #print(" minux {} is {}".format(other * res[-1], remain))
             return Poly(*res), remain
 
     def __truediv__(self, other):
