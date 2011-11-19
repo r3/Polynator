@@ -4,4 +4,6 @@ The Polynator is a polynomial calculator designed to fullfill the requirements s
 
 http://cse222.wikispaces.com/Polynomials
 
-The calculator will allow for addition, subtraction, multiplication and division of polynomials of any given length and degree (subject to Python's limitations). The program will allow for instantiation of polynomials based on input and shall be capable of parsing complete expressions when complete. I may include a LaTeX formatter for output when the given specs have been met. Additional likely improvements will be the modulo operator to allow for remainders in polynomial division.
+The calculator allows for addition, subtraction, multiplication, division, and modulus of polynomials of any given length and degree (subject to Python's limitations). The program allows for instantiation of polynomials based on input and is capable of parsing complete expressions using reverse polish notation. I may include a LaTeX formatter for output when the given specs have been met. Additional likely improvements will be the exponention operator.
+
+Project is complete so far as meeting the specifications is concerned.
