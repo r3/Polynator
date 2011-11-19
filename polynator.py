@@ -13,7 +13,6 @@ import string
 #TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
 #      variable the input is to be plugged. Still works for 'x' vars.
 #----------------------HIGH PRIORITY-------------------------
-#TODO: Setup division of polynomials
 #TODO: Allow for a means of operators inputting polynomials and operations
 #      using either a full line input, reverse polish notation, or something
 
@@ -28,6 +27,9 @@ class Term():
     """
 
     def __init__(self, coeff=0.0, var='', expo=0):
+        if len(var) > 1:
+            var = var[-1]
+            print("Allows for single variables only, using '{}'".format(var))
         self.coeff = float(coeff)
         self.var = var.lower()
         self.expo = expo
@@ -145,6 +147,8 @@ class Term():
             variable = self.var
             if self.var == other.var:
                 exponent = self.expo - other.expo
+            else:
+                exponent = self.expo
         elif isinstance(other, (int, float)):
             coefficient = self.coeff / other
             variable = self.var
@@ -177,7 +181,7 @@ class Poly():
             if isinstance(term, Term):
                 self.terms.setdefault(term.var, {}).setdefault(
                                       term.expo, []).append(term)
-        self._simplify()
+        self.__simplify()
 
     def __str__(self):
         rep = []
@@ -254,7 +258,8 @@ class Poly():
             res = []
             while other.degree <= remain.degree:
                 res.append(factor(remain, other))
-                #print("{} times {} is {}".format(res[-1], other, other * res[-1]))
+                #print("{} times {} is {}".format(
+                #    res[-1], other, other * res[-1]))
                 #print("{}".format(remain), end='')
                 remain = (other * res[-1] * -1) + remain
                 #print(" minux {} is {}".format(other * res[-1], remain))
@@ -278,15 +283,18 @@ class Poly():
     def __getitem__(self, index):
         return list(self)[index]
 
-    def _simplify(self):
+    def __simplify(self):
         for var in self.terms:
             for expo in self.terms[var]:
                 self.terms[var][expo] = reduce(add, self.terms[var][expo])
 
     @property
     def degree(self):
-        return list(self)[0].expo
-
+        deg = list(self)[0]
+        if deg.var:
+            return deg.expo
+        else:
+            return 0
 
     def plug(self, value):
         """Evaluate polynomial for x in f(x)"""
@@ -361,4 +369,61 @@ def parse_poly(inpt):
     return Poly(*terms)
 
 if __name__ == '__main__':
-    pass
+    stack = []
+    select = {
+                '?' : 'print(",\t".join((str(x) for x in stack)))',
+                ''  : 'stack.append(copy(stack[0]))',
+                'help' : 'hlp()',
+                'h' : 'hlp()'
+             }
+
+    def hlp():
+        print("""\n\t\t\t\t\tThe Polynator
+              Allows for calculator of single variable polynomials using a
+              variety of operations (+, -, *, /, %) in reverse polish notation.
+              As polynomials are entered, they are placed on a stack, and
+              mathematical operations make use of the newest two.
+
+              For example (3x^2 + 2x - 10) / (2x + 5) would be entered:
+
+              3x^2 + 2x - 10 [enter]
+              2x + 5 [enter]
+              / [enter]
+
+              Additional operations include the following:
+              ~     : Delete the top item on the stack
+              s     : Swap the previous two items on the stack
+              h     : Disply this help
+              clear : Clear the stack
+                    : Entering blank lines will duplicate the top stack item
+              q     : Quit\n""")
+
+    def dispatch(inpt, stack):
+        try:
+            if inpt in select:
+                eval(select[inpt])
+            elif inpt in ('-', '+', '*', '/', '%'):
+                stack.append(eval('stack.pop(-2) {} stack.pop()'.format(inpt)))
+                print(stack[-1])
+            elif inpt == 'clear':
+                for item in stack:
+                    stack.remove(item)
+            elif inpt == '~':
+                del stack[-1]
+            elif inpt == 's':
+                stack[-2], stack[-1] = stack[-1], stack[-2]
+            else:
+                try:
+                    stack.append(parse_poly(inpt))
+                except SyntaxError:
+                    print("'{}' not valid input\n".format(inpt))
+                    hlp()
+        except IndexError:
+            print("Not enough items on the stack.")
+
+        return inpt
+
+
+    hlp()
+    while dispatch(input('>> ').lower(), stack) not in ['q', 'Q']:
+        pass
