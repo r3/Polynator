@@ -6,15 +6,13 @@ This is...  THE POLYNATOR!
 from functools import total_ordering
 from functools import reduce
 from operator import add
+from copy import copy
 import string
 
 #----------------------LOW PRIORITY--------------------------
-#TODO: In the case of multiple variables, I'd need to store multiple exponents,
-#      one for each variable. Current implementation is broken.
 #TODO: Plug in both Poly and Term need to accept **kwargs specifying in which
-#      variable the input is to be plugged. Partial plugging should work.
+#      variable the input is to be plugged. Still works for 'x' vars.
 #----------------------HIGH PRIORITY-------------------------
-#TODO: Setup division of terms
 #TODO: Setup division of polynomials
 #TODO: Allow for a means of operators inputting polynomials and operations
 #      using either a full line input, reverse polish notation, or something
@@ -29,29 +27,33 @@ class Term():
     of one letter, and an integer exponent.
     """
 
-    def __init__(self, coeff=0, var='', expo=0):
-        assert isinstance(coeff, (int, float))
-        assert isinstance(expo, int)
-        assert isinstance(var, str)
-
-        self.coeff = coeff
+    def __init__(self, coeff=0.0, var='', expo=0):
+        self.coeff = float(coeff)
         self.var = var.lower()
         self.expo = expo
 
-        if coeff == 0:
+        if coeff in (0, 0.0):
             self.var = ''
             self.expo = 0
         elif expo == 0:
             self.var = ''
+        elif var == '':
+            self.expo = 1
 
     def __str__(self):
+        def coeff_format():
+            if self.coeff.is_integer():
+                return str(int(self.coeff))
+            else:
+                return "{:.3}".format(self.coeff)
+
         # Coefficient string construction
-        if self.coeff == -1:
+        if (coeff_format() == '-1') and self.var:
             coefficient = '-'
-        elif self.coeff and self.coeff != 1:
-            coefficient = str(self.coeff)
-        elif self.coeff and not self.expo and not self.var:
-            coefficient = str(self.coeff)
+        elif self.coeff and (coeff_format() != '1'):
+            coefficient = coeff_format()
+        elif self.coeff and not self.var and (self.expo == 1):
+            coefficient = coeff_format()
         else:
             coefficient = ''
 
@@ -117,6 +119,7 @@ class Term():
         else:
             raise TypeError("Incompatible types")
 
+    #BUG! x^6 * 1 = x^6 but 1 * x^6 = 1
     def __mul__(self, other):
         if isinstance(other, Term):
             if not other.var:
@@ -140,15 +143,13 @@ class Term():
             variable = self.var
             if self.var == other.var:
                 exponent = self.expo - other.expo
-        elif isinstance(other, int):
+        elif isinstance(other, (int, float)):
             coefficient = self.coeff / other
             variable = self.var
             exponent = self.expo
         else:
             raise TypeError("Incompatible types")
-        if not coefficient.is_integer():
-            raise ValueError("Not an even factor")
-        return Term(int(coefficient), variable, exponent)
+        return Term(coefficient, variable, exponent)
 
     def plug(self, value):
         """Determine value of term given x for f(x)"""
@@ -181,9 +182,9 @@ class Poly():
         for term in self:
             if not term.coeff and not term.var:
                 pass
-            elif term < 0 and rep:
+            elif term < 0 and rep:  # Get rid of unnecessary signs unless first
                 rep.append('-')
-                rep.append(str(term)[1:])  # Get rid of unnecessary signs
+                rep.append(str(term)[1:])
             elif term < 0:
                 rep.append(str(term))
             else:
@@ -243,15 +244,27 @@ class Poly():
                 res.append(term * other)
         return Poly(*res)
 
-    def __truediv__(self, other):
-        def factor():
-            return self.term(1) / other.term(1)
+    def __divmod__(self, other):
+        def factor(dividend, divisor):  # Self == dividend, other == divisor
+            return dividend[0] / divisor[0]
         if isinstance(other, Poly):
-            res = parse_poly('0')
-            while isinstance(factor(), Term):
-                res = (self * factor() * -1) + res
-                print(res)
-            return res
+            remain = copy(self)
+            res = []
+            while other.degree <= remain.degree:
+                res.append(factor(remain, other))
+                print("{} times {} is {}".format(res[-1], other, other * res[-1]))
+                print("{}".format(remain), end='')
+                remain = (other * res[-1] * -1) + remain
+                print(" minux {} is {}".format(other * res[-1], remain))
+            return Poly(*res), remain
+
+    def __truediv__(self, other):
+        res, remain = self.__divmod__(other)
+        return res
+
+    def __mod__(self, other):
+        res, remain = self.__divmod__(other)
+        return remain
 
     def __iter__(self):
         rep = []
@@ -259,6 +272,9 @@ class Poly():
             for term in var.values():
                 rep.append(term)
         return iter(sorted(rep, reverse=True))
+
+    def __getitem__(self, index):
+        return list(self)[index]
 
     def _simplify(self):
         for var in self.terms:
@@ -269,8 +285,6 @@ class Poly():
     def degree(self):
         return list(self)[0].expo
 
-    def term(self, number):
-        return list(self)[number - 1]
 
     def plug(self, value):
         """Evaluate polynomial for x in f(x)"""
@@ -283,18 +297,18 @@ def parse_term(inpt):
     Term objects.
     """
 
-    def fix(num):
+    def fix(num, cls=int):
         if num == '-':
             return -1
         elif num:
             try:
-                return int(num)
+                return cls(num)
             except ValueError:
                 raise SyntaxError("Improper input formatting ({})".format(num))
         else:
             return 1
 
-    inpt = ''.join([x for x in inpt if x != '^'])
+    inpt = inpt.replace('^', '')
     coeff = ''
     var = ''
     expo = ''
@@ -313,11 +327,15 @@ def parse_term(inpt):
                 coeff = item + coeff
             else:
                 pass
+        elif item == '.' and var:
+            expo += item
+        elif item == '.':
+            coeff += item
         else:
             raise SyntaxError("Improper input formatting ({}).".format(item))
 
-    coeff = fix(coeff)
-    expo = fix(expo)
+    coeff = fix(coeff, float)
+    expo = fix(expo, int)
 
     return Term(coeff, var, expo)
 
