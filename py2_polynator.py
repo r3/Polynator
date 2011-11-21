@@ -143,6 +143,8 @@ class Term():
 
     def __div__(self, other):
         if isinstance(other, Term):
+            if self == other:
+                return Term(1, '', 1)
             coefficient = self.coeff / other.coeff
             variable = self.var
             if self.var == other.var:
@@ -204,7 +206,7 @@ class Poly():
 
     def __lt__(self, other):
         if isinstance(other, Poly):
-            return list(self)[0] < list(other)[0]
+            return self.degree < other.degree
         elif isinstance(other, Term):
             return list(self)[0] < other
         elif other == 0:
@@ -214,7 +216,7 @@ class Poly():
 
     def __eq__(self, other):
         if isinstance(other, Poly):
-            list(self) == list(other)
+            return list(self) == list(other)
         else:
             raise TypeError("These types cannot be compared")
 
@@ -256,7 +258,7 @@ class Poly():
         if isinstance(other, Poly):
             remain = copy(self)
             res = []
-            while other.degree <= remain.degree:
+            while (other <= remain) and (factor(remain, other) != 0):
                 res.append(factor(remain, other))
                 remain = (other * res[-1] * -1) + remain
             return Poly(*res), remain

@@ -14,6 +14,7 @@ import string
 #      variable the input is to be plugged. Still works for 'x' vars.
 #TODO: Implement exponentiation
 #TODO: Implement __radd__ type methods for Term and Poly
+#TODO: Fix BANDAGE issue. Just an ugly hack
 #----------------------HIGH PRIORITY-------------------------
 
 
@@ -144,8 +145,10 @@ class Term():
 
     def __truediv__(self, other):
         if isinstance(other, Term):
+            # <BANDAGE>
             if self == other:
                 return Term(1, '', 1)
+            # </BANDAGE>
             coefficient = self.coeff / other.coeff
             variable = self.var
             if self.var == other.var:
@@ -259,11 +262,9 @@ class Poly():
         if isinstance(other, Poly):
             remain = copy(self)
             res = []
-            while other <= remain and factor(remain, other) != 0:
+            while (other <= remain) and (factor(remain, other) != 0):
                 res.append(factor(remain, other))
                 remain = (other * res[-1] * -1) + remain
-                print("{} :: {}".format(remain, [str(x) for x in res]))
-                input()
             return Poly(*res), remain
 
     def __truediv__(self, other):
